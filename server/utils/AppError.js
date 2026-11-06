@@ -11,6 +11,10 @@ class AppError extends Error {
     return new AppError(400, message, details);
   }
 
+  static conflict(message, details) {
+    return new AppError(409, message, details);
+  }
+
   static notFound(message = 'Not found') {
     return new AppError(404, message);
   }

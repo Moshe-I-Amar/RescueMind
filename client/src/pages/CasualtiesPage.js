@@ -6,13 +6,13 @@ import { useCasualtyList } from '../hooks/useCasualties';
 import useNow from '../hooks/useNow';
 import CasualtyCard from '../components/casualty/CasualtyCard';
 import PriorityCounts from '../components/casualty/PriorityCounts';
-import NewCasualtyModal from '../components/casualty/NewCasualtyModal';
+import QuickCreateSheet from '../components/casualty/QuickCreateSheet';
 import { buildCasualtyFilters, isOnScene } from '../components/casualty/casualtyFilters';
 
 /** Screen A — every casualty on scene, most urgent first (order comes from the server). */
 export default function CasualtiesPage() {
   const { catalog } = useCatalog();
-  const { data: casualties, error, loading } = useCasualtyList();
+  const { data: casualties, error, loading, reload } = useCasualtyList();
   const [filter, setFilter] = useState('all');
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
@@ -56,7 +56,14 @@ export default function CasualtiesPage() {
       </button>
 
       {creating && (
-        <NewCasualtyModal onClose={() => setCreating(false)} onCreated={(c) => navigate(`/casualties/${c.id}`)} />
+        <QuickCreateSheet
+          onClose={() => setCreating(false)}
+          onCreated={(c) => navigate(`/casualties/${c.id}`)}
+          onBulkCreated={() => {
+            setCreating(false);
+            reload();
+          }}
+        />
       )}
     </div>
   );

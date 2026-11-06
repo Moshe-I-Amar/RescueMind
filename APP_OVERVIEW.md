@@ -70,12 +70,12 @@ API:
 
 | Method & path | Purpose |
 |---|---|
-| `GET /api/catalog` | Labels/options for the UI, MARCH categories + actions (+ allowed sites), tourniquet thresholds |
+| `GET /api/catalog` | Labels/options for the UI, MARCH categories + actions (+ allowed sites), tourniquet thresholds, vital input ranges (hard limits, plausible range, stepper start value) |
 | `GET /api/casualties[?status=]` | Casualties sorted by priority then time since injury (no vitals history) |
 | `POST /api/casualties` | Create (only `priority` required); gets a sequential `number` |
 | `GET /api/casualties/:id` | Full casualty view |
 | `PATCH /api/casualties/:id` | Update priority, status, name, mechanism, injuries |
-| `POST /api/casualties/:id/treatments` | Log a MARCH action (`action`, `site` when required); category derived by server |
+| `POST /api/casualties/:id/treatments` | Log a MARCH action (`action`, `site` when required, optional `performedAt`); category derived by server. Returns **409** with `details.warnings` (e.g. duplicate action on the same site) unless sent with `confirm: true` |
 | `DELETE /api/casualties/:id/treatments/:treatmentId` | Undo a logged action |
 | `POST /api/casualties/:id/vitals` | Add a (possibly partial) reading |
 
@@ -87,15 +87,22 @@ Each vitals reading also carries its own `status`. The client never re-implement
 ### Frontend (`client/src/`)
 
 - `pages/CasualtiesPage.js` (`/casualties`): casualty cards sorted by urgency, priority counts,
-  filter chips, live tourniquet / time-since-injury timers, "+ new casualty" fast intake.
+  filter chips, live tourniquet / time-since-injury timers, "+ new casualty" sheet: one tap on a
+  priority creates and opens the casualty; +3 / +5 urgent for mass-casualty events.
 - `pages/CasualtyPage.js` (`/casualties/:id`): priority-coloured header with priority switch and
-  tourniquet timer, vitals tiles, top alert, and tabs (registry in `TABS`):
-  **Treatment** (MARCH steps with their alerts, one-tap actions, site picker, undo),
-  **Monitoring** (manual entry + history coloured by server status),
+  tourniquet timer, vitals tiles, top alert, and tabs (registry in `TABS`).
+  **Vitals tiles are buttons**: tap one to update just that vital with a large stepper starting
+  from the last value (blood pressure = two steppers, AVPU = one-tap buttons); values outside the
+  plausible range trigger a typo guard with suggested corrections.
+  **Treatment** (MARCH steps with their alerts; one tap logs an action; actions with sites open a
+  sheet with site + "when" (now / 5 / 15 / 30 min ago); duplicates ask for confirmation; every log
+  and undo shows a toast that can reverse it — no blocking dialogs),
+  **Monitoring** (reading history coloured by server status),
   **Details** (evacuation status, name, mechanism, injuries).
 - `api/` HTTP client and endpoint wrappers; `hooks/` (`useResource` with polling/mutate,
   `useCasualties`, `useAsyncAction`, `useNow`); `context/CatalogContext.js` (catalog + label lookups, `RequireCatalog`).
-- `components/ui/`: domain-free primitives (Button, Card, Badge, ChipGroup, Tabs, Modal, fields).
+- `components/ui/`: domain-free primitives (Button, Card, Badge, ChipGroup with large size, Tabs,
+  BottomSheet, Stepper, fields); `context/ToastContext.js` (toast with action + countdown).
 - `components/casualty/`: domain components; `vitalsConfig.js` drives card row, tiles, table and form;
   `theme/styles.js` holds the colour language.
 

@@ -103,3 +103,30 @@ test('latestVitals keeps the last known value of each metric across partial read
   expect(view.latestVitals).toMatchObject({ heartRate: 130, systolic: 100, respiratoryRate: 16, avpu: 'A' });
   expect(view.shockIndex).toBe(1.3);
 });
+
+describe('duplicate treatment confirmation', () => {
+  test('same action on the same site needs confirm; a different site does not', async () => {
+    const service = makeService();
+    const c = await service.create({ priority: 'urgent' });
+    await service.addTreatment(c.id, { action: 'tourniquet', site: 'right_leg' });
+
+    await expect(service.addTreatment(c.id, { action: 'tourniquet', site: 'right_leg' })).rejects.toMatchObject({
+      status: 409,
+      details: { warnings: [expect.objectContaining({ code: 'duplicate', action: 'tourniquet', site: 'right_leg' })] },
+    });
+
+    const other = await service.addTreatment(c.id, { action: 'tourniquet', site: 'left_leg' });
+    expect(other.treatments).toHaveLength(2);
+
+    const confirmed = await service.addTreatment(c.id, { action: 'tourniquet', site: 'right_leg', confirm: true });
+    expect(confirmed.treatments).toHaveLength(3);
+    expect(confirmed.activeTourniquet.count).toBe(3);
+  });
+
+  test('repeat of an action without a site (e.g. TXA) needs confirm', async () => {
+    const service = makeService();
+    const c = await service.create({ priority: 'urgent' });
+    await service.addTreatment(c.id, { action: 'txa' });
+    await expect(service.addTreatment(c.id, { action: 'txa' })).rejects.toMatchObject({ status: 409 });
+  });
+});

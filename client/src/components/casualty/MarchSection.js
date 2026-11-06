@@ -1,22 +1,10 @@
-import React, { useState } from 'react';
-import { Button, ChipGroup } from '../ui';
+import React from 'react';
+import { Button } from '../ui';
 import AlertList from './AlertList';
 import TreatmentChip from './TreatmentChip';
 
-/**
- * One MARCH step: its alerts, what was done, and one-tap actions.
- * Actions with `sites` open an inline site picker; tapping a site logs the action.
- */
-export default function MarchSection({ category, treatments, alerts, onAdd, onRemove, busy }) {
-  const [pendingAction, setPendingAction] = useState(null);
-
-  const choose = (action) => (action.sites ? setPendingAction(action) : onAdd({ action: action.code }));
-
-  const chooseSite = (site) => {
-    onAdd({ action: pendingAction.code, site });
-    setPendingAction(null);
-  };
-
+/** One MARCH step: its alerts, what was done, and its actions. */
+export default function MarchSection({ category, treatments, alerts, onChoose, onRemove, busy }) {
   return (
     <section className="rounded-xl bg-white p-3 shadow-sm space-y-2" aria-label={category.label}>
       <h3 className="flex items-center gap-2 font-bold">
@@ -38,30 +26,11 @@ export default function MarchSection({ category, treatments, alerts, onAdd, onRe
 
       <div className="flex flex-wrap gap-2">
         {category.actions.map((action) => (
-          <Button
-            key={action.code}
-            variant={pendingAction?.code === action.code ? 'primary' : 'secondary'}
-            size="sm"
-            disabled={busy}
-            onClick={() => choose(action)}
-          >
+          <Button key={action.code} variant="secondary" disabled={busy} onClick={() => onChoose(action)} className="min-h-[48px]">
             + {action.label}
           </Button>
         ))}
       </div>
-
-      {pendingAction && (
-        <div className="rounded-lg bg-blue-50 p-2 space-y-2">
-          <div className="text-sm font-semibold">{pendingAction.label} — בחר מיקום:</div>
-          <ChipGroup
-            ariaLabel="מיקום"
-            options={pendingAction.sites.map((s) => ({ value: s.code, label: s.label }))}
-            value={null}
-            onChange={chooseSite}
-          />
-          <Button variant="ghost" size="sm" onClick={() => setPendingAction(null)}>ביטול</Button>
-        </div>
-      )}
     </section>
   );
 }

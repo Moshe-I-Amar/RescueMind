@@ -67,3 +67,25 @@ describe('casualty API', () => {
     expect((await request(app).get('/api/casualties/nope')).status).toBe(404);
   });
 });
+
+test('duplicate treatment -> 409 with warnings, then 201 when confirmed', async () => {
+  const app = makeApp();
+  const { id } = (await request(app).post('/api/casualties').send({ priority: 'urgent' })).body.data;
+  const url = `/api/casualties/${id}/treatments`;
+  await request(app).post(url).send({ action: 'txa' });
+
+  const dup = await request(app).post(url).send({ action: 'txa' });
+  expect(dup.status).toBe(409);
+  expect(dup.body.details.warnings[0]).toMatchObject({ code: 'duplicate', action: 'txa' });
+
+  expect((await request(app).post(url).send({ action: 'txa', confirm: true })).status).toBe(201);
+});
+
+test('catalog exposes vital input ranges and validation uses them', async () => {
+  const app = makeApp();
+  const catalog = (await request(app).get('/api/catalog')).body.data;
+  expect(catalog.vitalInputs.oxygenLevel).toMatchObject({ max: 100, plausible: [50, 100] });
+
+  const { id } = (await request(app).post('/api/casualties').send({ priority: 'urgent' })).body.data;
+  expect((await request(app).post(`/api/casualties/${id}/vitals`).send({ oxygenLevel: 101 })).status).toBe(400);
+});

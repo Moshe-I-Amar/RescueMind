@@ -1,5 +1,6 @@
 const Joi = require('joi');
 const catalog = require('../../domain/catalog');
+const { VITAL_INPUTS } = require('../../domain/vitalsAssessment');
 
 /** Joi string restricted to the codes of a catalog list. */
 const oneOf = (list) => Joi.string().valid(...catalog.codesOf(list));
@@ -19,7 +20,6 @@ const casualtyFields = {
   injuries: Joi.array().items(injury).max(20),
 };
 
-const vitalNumber = (min, max) => Joi.number().min(min).max(max);
 
 module.exports = {
   idParams: Joi.object({ id: Joi.string().required() }),
@@ -43,15 +43,14 @@ module.exports = {
     site: Joi.string(),
     note: Joi.string().trim().max(300).allow(''),
     performedAt: Joi.date().iso(),
+    confirm: Joi.boolean().default(false),
   }),
 
   addVitals: Joi.object({
-    heartRate: vitalNumber(0, 300),
-    oxygenLevel: vitalNumber(0, 100),
-    systolic: vitalNumber(0, 300),
-    diastolic: vitalNumber(0, 200),
-    respiratoryRate: vitalNumber(0, 80),
+    ...Object.fromEntries(
+      Object.entries(VITAL_INPUTS).map(([field, { min, max }]) => [field, Joi.number().min(min).max(max)])
+    ),
     avpu: oneOf(catalog.AVPU),
     recordedAt: Joi.date().iso(),
-  }).or('heartRate', 'oxygenLevel', 'systolic', 'diastolic', 'respiratoryRate', 'avpu'),
+  }).or(...Object.keys(VITAL_INPUTS), 'avpu'),
 };

@@ -15,9 +15,7 @@ const TABS = [
   { key: 'treatment', label: 'טיפול', render: ({ casualty, actions }) => (
     <MarchPanel casualty={casualty} onAdd={actions.addTreatment} onRemove={actions.removeTreatment} />
   ) },
-  { key: 'vitals', label: 'ניטור', render: ({ casualty, actions }) => (
-    <VitalsPanel casualty={casualty} onAdd={actions.addVitals} />
-  ) },
+  { key: 'vitals', label: 'ניטור', render: ({ casualty }) => <VitalsPanel casualty={casualty} /> },
   { key: 'details', label: 'פרטים', render: ({ casualty, actions }) => (
     <DetailsPanel key={casualty.id} casualty={casualty} onUpdate={actions.update} />
   ) },
@@ -40,7 +38,7 @@ export default function CasualtyPage() {
     <div className="min-h-screen bg-gray-100 pb-10">
       <div className="mx-auto max-w-xl">
         <CasualtyHeader casualty={casualty} now={now} onChangePriority={(priority) => actions.update({ priority })} />
-        <VitalsTiles casualty={casualty} />
+        <VitalsTiles casualty={casualty} onSave={actions.addVitals} />
         <AlertList alerts={casualty.alerts} limit={1} className="px-3 pb-3" />
         <Tabs tabs={TABS} active={tab} onChange={setTab} />
         {active.render({ casualty, actions })}

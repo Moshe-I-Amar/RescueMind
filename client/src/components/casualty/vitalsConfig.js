@@ -7,19 +7,41 @@
  */
 const hasValue = (v) => v !== undefined && v !== null && v !== '';
 
+/**
+ * fields: reading fields edited from this tile (numeric -> stepper per field).
+ * choice: catalog list edited with one-tap buttons instead.
+ */
 export const VITAL_METRICS = [
-  { key: 'heartRate', label: 'דופק', unit: 'BPM', value: (r) => r.heartRate },
-  { key: 'oxygenLevel', label: 'SpO₂', unit: '%', value: (r) => (hasValue(r.oxygenLevel) ? `${r.oxygenLevel}%` : null) },
+  { key: 'heartRate', label: 'דופק', unit: 'BPM', fields: ['heartRate'], value: (r) => r.heartRate },
+  {
+    key: 'oxygenLevel',
+    label: 'SpO₂',
+    unit: '%',
+    fields: ['oxygenLevel'],
+    value: (r) => (hasValue(r.oxygenLevel) ? `${r.oxygenLevel}%` : null),
+  },
   {
     key: 'bloodPressure',
     label: 'ל.ד',
     unit: 'mmHg',
     statusKey: 'systolic',
+    fields: ['systolic', 'diastolic'],
     value: (r) => (hasValue(r.systolic) ? `${r.systolic}/${r.diastolic ?? '–'}` : null),
   },
-  { key: 'respiratoryRate', label: 'נשימות', unit: '/דק׳', value: (r) => r.respiratoryRate },
-  { key: 'avpu', label: 'הכרה', unit: 'AVPU', value: (r) => r.avpu },
+  { key: 'respiratoryRate', label: 'נשימות', unit: '/דק׳', fields: ['respiratoryRate'], value: (r) => r.respiratoryRate },
+  { key: 'avpu', label: 'הכרה', unit: 'AVPU', choice: 'avpu', value: (r) => r.avpu },
 ];
+
+/** Labels for individual reading fields (stepper titles, messages). */
+export const FIELD_LABELS = {
+  heartRate: 'דופק',
+  oxygenLevel: 'SpO₂',
+  systolic: 'סיסטולי',
+  diastolic: 'דיאסטולי',
+  respiratoryRate: 'נשימות',
+};
+
+export const FIELD_UNITS = { oxygenLevel: '%' };
 
 /** Displayable items for one reading: [{ key, label, unit, value, level }] (missing values skipped). */
 export function vitalItems(reading, status = {}) {
@@ -44,12 +66,3 @@ export function shockIndexItem(casualty) {
     level: casualty.vitalStatus?.shockIndex,
   };
 }
-
-/** Numeric inputs of the manual vitals form (AVPU is a select). */
-export const VITAL_INPUTS = [
-  { key: 'heartRate', label: 'דופק', max: 300 },
-  { key: 'oxygenLevel', label: 'SpO₂ %', max: 100 },
-  { key: 'systolic', label: 'סיסטולי', max: 300 },
-  { key: 'diastolic', label: 'דיאסטולי', max: 200 },
-  { key: 'respiratoryRate', label: 'נשימות/דק׳', max: 80 },
-];

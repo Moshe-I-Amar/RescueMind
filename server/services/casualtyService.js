@@ -1,5 +1,6 @@
 const AppError = require('../utils/AppError');
 const { ACTIONS_BY_CODE } = require('../domain/catalog');
+const { treatmentWarnings } = require('../domain/treatmentRules');
 const { toCasualtyView, toCasualtySummary, compareByUrgency } = require('../domain/casualtyView');
 
 /**
@@ -57,8 +58,20 @@ function createCasualtyService({ repository, clock = () => new Date() }) {
       return found(await repository.update(id, fields));
     },
 
-    async addTreatment(id, input) {
-      return found(await repository.addTreatment(id, buildTreatment(input)));
+    /**
+     * Logs a treatment. If rules raise warnings (e.g. duplicate), responds 409 with them
+     * unless the caller re-sends with `confirm: true`.
+     */
+    async addTreatment(id, { confirm = false, ...input }) {
+      const treatment = buildTreatment(input);
+      const casualty = await repository.getById(id);
+      if (!casualty) throw AppError.notFound('Casualty not found');
+
+      const warnings = treatmentWarnings(casualty.treatments, treatment);
+      if (warnings.length && !confirm) {
+        throw AppError.conflict('Treatment needs confirmation', { warnings });
+      }
+      return found(await repository.addTreatment(id, treatment));
     },
 
     async removeTreatment(id, treatmentId) {

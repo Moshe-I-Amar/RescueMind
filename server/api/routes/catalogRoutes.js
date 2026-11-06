@@ -1,6 +1,6 @@
 const express = require('express');
 const catalog = require('../../domain/catalog');
-const { TOURNIQUET_MINUTES } = require('../../domain/vitalsAssessment');
+const { TOURNIQUET_MINUTES, VITAL_INPUTS } = require('../../domain/vitalsAssessment');
 
 /** Read-only clinical vocabulary for clients (labels, options, MARCH actions). */
 function createCatalogRouter() {
@@ -15,6 +15,7 @@ function createCatalogRouter() {
     avpu: catalog.AVPU,
     march: catalog.MARCH,
     tourniquetMinutes: TOURNIQUET_MINUTES,
+    vitalInputs: VITAL_INPUTS,
   };
 
   router.get('/', (req, res) => res.json({ status: 'success', data: payload }));

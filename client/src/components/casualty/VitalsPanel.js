@@ -1,17 +1,12 @@
 import React from 'react';
-import { StateMessage } from '../ui';
-import { useAsyncAction } from '../../hooks/useAsyncAction';
-import VitalsForm from './VitalsForm';
 import VitalsHistory from './VitalsHistory';
 
-export default function VitalsPanel({ casualty, onAdd }) {
-  const { run, busy, error } = useAsyncAction();
-
+/** Monitoring tab: reading history. Values are entered by tapping a tile at the top. */
+export default function VitalsPanel({ casualty }) {
   return (
     <div className="space-y-3 p-3">
-      {error && <StateMessage tone="error">{error.message}</StateMessage>}
-      <VitalsForm busy={busy} onSubmit={(vitals) => run(() => onAdd(vitals))} />
-      <VitalsHistory vitals={casualty.vitals} />
+      <p className="text-center text-sm text-gray-500">לעדכון מדד — לחץ על האריח שלו למעלה</p>
+      {casualty.vitals.length ? <VitalsHistory vitals={casualty.vitals} /> : <p className="text-center text-gray-500">אין מדידות עדיין</p>}
     </div>
   );
 }

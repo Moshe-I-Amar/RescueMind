@@ -3,8 +3,22 @@
  * Thresholds are trauma-oriented (field care), not general-ward ranges.
  */
 
+/**
+ * Numeric vitals input definition, shared by validation (hard limits) and clients:
+ * - min/max: values outside are rejected
+ * - plausible: values outside are probably typos -> client asks to confirm
+ * - initial: stepper starting point when there is no previous reading
+ */
+const VITAL_INPUTS = {
+  heartRate: { min: 0, max: 300, plausible: [25, 220], initial: 80 },
+  oxygenLevel: { min: 0, max: 100, plausible: [50, 100], initial: 98 },
+  systolic: { min: 0, max: 300, plausible: [40, 250], initial: 120 },
+  diastolic: { min: 0, max: 200, plausible: [20, 150], initial: 80 },
+  respiratoryRate: { min: 0, max: 80, plausible: [4, 60], initial: 16 },
+};
+
 /** Fields a vitals reading can carry. */
-const VITAL_FIELDS = ['heartRate', 'oxygenLevel', 'systolic', 'diastolic', 'respiratoryRate', 'avpu'];
+const VITAL_FIELDS = [...Object.keys(VITAL_INPUTS), 'avpu'];
 
 const LEVEL = Object.freeze({ NORMAL: 'normal', WARNING: 'warning', CRITICAL: 'critical' });
 
@@ -120,6 +134,7 @@ const LEVEL_RANK = { [LEVEL.CRITICAL]: 0, [LEVEL.WARNING]: 1, [LEVEL.NORMAL]: 2 
 const byLevel = (a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level];
 
 module.exports = {
+  VITAL_INPUTS,
   VITAL_FIELDS,
   LEVEL,
   TOURNIQUET_MINUTES,
