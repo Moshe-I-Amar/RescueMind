@@ -7,6 +7,9 @@ import AIRecommendations from "./pages/AIRecommendations";
 import HospitalIntegration from "./pages/HospitalIntegration";
 import Navbar from "./components/common/NavBar";
 import ProtectedRoute from "./components/login/ProtectedRoute";
+import CasualtiesPage from "./pages/CasualtiesPage";
+import CasualtyPage from "./pages/CasualtyPage";
+import { RequireCatalog } from "./context/CatalogContext";
 
 export default function AppRoutes() {
   return (
@@ -14,6 +17,8 @@ export default function AppRoutes() {
       <Navbar/>
       <Routes>
         <Route exact path="/" element={<Home />} />
+        <Route path="/casualties" element={<RequireCatalog><CasualtiesPage /></RequireCatalog>} />
+        <Route path="/casualties/:id" element={<RequireCatalog><CasualtyPage /></RequireCatalog>} />
         <Route path="/patient-monitoring" element={<PatientMonitoring />} />
         <Route path="/treatment-logs" element={<TreatmentLogs />} />
         <Route path="/ai-recommendations" element={<AIRecommendations />} />

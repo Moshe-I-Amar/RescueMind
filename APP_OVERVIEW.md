@@ -35,7 +35,8 @@ client is currently local (simulated data + `localStorage`).
 ```bash
 cd server && npm install && npm start     # http://localhost:5000
 cd client && npm install && npm start     # http://localhost:3000
-cd server && npm test                     # Jest auth tests (mongodb-memory-server)
+cd server && npm run start:demo           # no MongoDB needed: in-memory store + demo casualties + simulated vitals
+cd server && npm test                     # Jest (casualty tests use the in-memory store; auth tests need mongodb-memory-server)
 ```
 
 Server environment variables (`server/.env`, git-ignored):
@@ -46,6 +47,57 @@ Server environment variables (`server/.env`, git-ignored):
 | `MONGODB_URI` | `app.js` | Defaults to `mongodb://localhost:27017/rescueMind` |
 | `ACCESS_TOKEN_SECRET` | `authController.js`, `requireAuth.js` | JWT signing secret |
 | `PORT` | `app.js` | Defaults to 5000 |
+| `DATA_STORE` | `container.js` | `mongo` (default) or `memory` |
+| `SEED_DEMO` | `app.js` | `true` seeds 5 demo casualties (dev only) |
+| `SIMULATE_VITALS` | `app.js` | `true` adds random-walk vitals every 5 s (dev only, stands in for sensors) |
+
+## Casualty module (casualty-centred workflow)
+
+The main workflow: a list of casualties on scene, and one screen per casualty
+built around the MARCH protocol.
+
+### Backend layers (`server/`)
+
+| Layer | Files | Responsibility |
+|---|---|---|
+| Domain (pure, no I/O) | `domain/catalog.js`, `domain/vitalsAssessment.js`, `domain/casualtyView.js` | Clinical vocabulary (priorities, MARCH actions, sites…), vitals thresholds → status + alerts, shock index, tourniquet time, read model and urgency sort |
+| Service | `services/casualtyService.js` | Use-cases; validates treatment action/site against the catalog; depends only on the repository contract |
+| Repository | `repositories/mongoCasualtyRepository.js`, `repositories/memoryCasualtyRepository.js`, model `api/models/Casualty.js` | Same contract, two storages (Mongo for production, memory for tests/demo) |
+| HTTP | `api/routes/casualtyRoutes.js`, `api/routes/catalogRoutes.js`, `api/controllers/casualtyController.js`, `api/validation/casualtySchemas.js`, `middlewares/validate.js`, `middlewares/errorHandler.js` | Thin adapters, generic Joi validation, uniform `{status, data}` / error responses |
+| Composition | `container.js`, `createApp.js`, `app.js` | Wires implementations from env; `createApp` has no I/O so tests reuse it |
+
+API:
+
+| Method & path | Purpose |
+|---|---|
+| `GET /api/catalog` | Labels/options for the UI, MARCH categories + actions (+ allowed sites), tourniquet thresholds |
+| `GET /api/casualties[?status=]` | Casualties sorted by priority then time since injury (no vitals history) |
+| `POST /api/casualties` | Create (only `priority` required); gets a sequential `number` |
+| `GET /api/casualties/:id` | Full casualty view |
+| `PATCH /api/casualties/:id` | Update priority, status, name, mechanism, injuries |
+| `POST /api/casualties/:id/treatments` | Log a MARCH action (`action`, `site` when required); category derived by server |
+| `DELETE /api/casualties/:id/treatments/:treatmentId` | Undo a logged action |
+| `POST /api/casualties/:id/vitals` | Add a (possibly partial) reading |
+
+Every casualty response includes computed fields: `latestVitals` (last known value per metric),
+`vitalStatus` (normal/warning/critical per metric), `shockIndex`, `activeTourniquet`
+(earliest tourniquet, start time, count), and `alerts` (level, MARCH step, message, what to do).
+Each vitals reading also carries its own `status`. The client never re-implements these rules.
+
+### Frontend (`client/src/`)
+
+- `pages/CasualtiesPage.js` (`/casualties`): casualty cards sorted by urgency, priority counts,
+  filter chips, live tourniquet / time-since-injury timers, "+ new casualty" fast intake.
+- `pages/CasualtyPage.js` (`/casualties/:id`): priority-coloured header with priority switch and
+  tourniquet timer, vitals tiles, top alert, and tabs (registry in `TABS`):
+  **Treatment** (MARCH steps with their alerts, one-tap actions, site picker, undo),
+  **Monitoring** (manual entry + history coloured by server status),
+  **Details** (evacuation status, name, mechanism, injuries).
+- `api/` HTTP client and endpoint wrappers; `hooks/` (`useResource` with polling/mutate,
+  `useCasualties`, `useAsyncAction`, `useNow`); `context/CatalogContext.js` (catalog + label lookups, `RequireCatalog`).
+- `components/ui/`: domain-free primitives (Button, Card, Badge, ChipGroup, Tabs, Modal, fields).
+- `components/casualty/`: domain components; `vitalsConfig.js` drives card row, tiles, table and form;
+  `theme/styles.js` holds the colour language.
 
 ## Client — pages and logic
 
@@ -137,12 +189,14 @@ Entry point: `server/app.js` — connects to MongoDB, enables CORS + JSON, serve
 
 ## Current state / known gaps
 
+- **Casualty API has no authentication yet** (`requireAuth` is ready but not applied, because client login is not connected).
 - **Client auth is not connected to the server**: the client uses a hard-coded user list
   (name + personal ID), while the server expects phone + password with JWT.
   `ProtectedRoute` exists but is commented out in `AppRoutes.js`, and it redirects to
   `/login`, which has no route.
-- **Vital signs are simulated** (random numbers) in both Monitoring and Treatment Logs;
-  there is no sensor/NFC integration yet, and the two pages generate data independently.
+- **Vital signs are simulated** (random numbers) in the older Monitoring and Treatment Logs pages,
+  and by the dev-only server simulator for casualties; there is no sensor/NFC integration yet.
+  The older pages are not yet connected to the casualty module.
 - **Hospital sending is simulated**; storage is browser `localStorage` only (single record,
   overwritten on each save). Nothing about patients/treatments is stored in MongoDB.
 - **AI result is shown as raw text**; the JSON returned by Gemini is not parsed or rendered

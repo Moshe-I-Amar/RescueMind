@@ -2,8 +2,8 @@
 import React, { useState, useCallback, useRef } from "react";
 import CameraCapture from "../components/camra-ai/CameraCapture";
 import ResultDisplay from "../components/camra-ai/ResultDisplay";
+import { API_BASE } from "../api/httpClient";
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function dataURItoBlob(dataURI) {
   const byteString = atob(dataURI.split(',')[1]);
